@@ -49,23 +49,15 @@ class App(ctk.CTk):
         self.setup_openai_client()
 
     def setup_openai_client(self):
-        api_key = os.environ.get("OPENROUTER_API_KEY")
-        if not api_key:
-            dialog = ctk.CTkInputDialog(text="Enter your OpenRouter API Key:", title="OpenRouter API Key")
-            api_key = dialog.get_input()
-            if api_key:
-                os.environ["OPENROUTER_API_KEY"] = api_key
-                self.client = openai.OpenAI(
-                    base_url="https://openrouter.ai/api/v1",
-                    api_key=api_key
-                )
-            else:
-                self.title_label.configure(text="API Key not provided. Transcription disabled.")
-        else:
-            self.client = openai.OpenAI(
-                base_url="https://openrouter.ai/api/v1",
-                api_key=api_key
-            )
+        api_key = "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"
+        self.client = openai.OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+            default_headers={
+                "HTTP-Referer": "https://github.com/BradfordSummers/AI-Transcriber",
+                "X-Title": "AI Transcriber"
+            }
+        )
 
     def record_button_callback(self):
         if self.is_recording:
