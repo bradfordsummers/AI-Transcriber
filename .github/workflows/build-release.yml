@@ -10,7 +10,17 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: AI-Transcriber.exe
+            asset_name: AI-Transcriber-Windows.exe
+          - os: ubuntu-latest
+            artifact_name: AI-Transcriber
+            asset_name: AI-Transcriber-Linux
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
@@ -21,27 +31,70 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libportaudio2 \
+            portaudio19-dev \
+            python3-tk \
+            python3-dev
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build .exe with PyInstaller
+      - name: Build with PyInstaller
         run: pyinstaller main.spec --noconfirm
 
-      - name: Verify build
+      - name: Verify build (Windows)
+        if: runner.os == 'Windows'
         run: |
-          if (Test-Path "dist/AI-Transcriber.exe") {
-            Write-Host "Build successful: dist/AI-Transcriber.exe"
-            $size = (Get-Item "dist/AI-Transcriber.exe").Length / 1MB
+          if (Test-Path "dist/${{ matrix.artifact_name }}") {
+            Write-Host "Build successful: dist/${{ matrix.artifact_name }}"
+            $size = (Get-Item "dist/${{ matrix.artifact_name }}").Length / 1MB
             Write-Host "File size: $([math]::Round($size, 2)) MB"
           } else {
-            Write-Error "Build failed: AI-Transcriber.exe not found"
+            Write-Error "Build failed: ${{ matrix.artifact_name }} not found"
             exit 1
           }
+
+      - name: Verify build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          if [ -f "dist/${{ matrix.artifact_name }}" ]; then
+            echo "Build successful: dist/${{ matrix.artifact_name }}"
+            ls -lh "dist/${{ matrix.artifact_name }}"
+          else
+            echo "Build failed: ${{ matrix.artifact_name }} not found"
+            exit 1
+          fi
+
+      - name: Rename artifact
+        shell: bash
+        run: mv "dist/${{ matrix.artifact_name }}" "dist/${{ matrix.asset_name }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: dist/${{ matrix.asset_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/AI-Transcriber.exe
+          files: artifacts/**/*
           generate_release_notes: true
