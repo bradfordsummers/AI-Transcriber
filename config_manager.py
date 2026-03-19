@@ -1,5 +1,5 @@
 """
-config_manager.py — Manages persistent configuration (API key) via config.json.
+config_manager.py — Manages persistent configuration (API key/provider) via config.json.
 
 The config file is stored next to the executable (or script) so it persists
 between sessions and is never committed to version control.
@@ -28,6 +28,7 @@ CONFIG_PATH = os.path.join(_get_config_dir(), "config.json")
 
 _DEFAULT_CONFIG = {
     "api_key": "",
+    "api_provider": "OpenAI",  # "OpenAI" or "OpenRouter"
 }
 
 

@@ -6,7 +6,7 @@ Layout (top to bottom):
   2. Record button (Start / Stop toggle) + Status label
   3. Scrollable editable text box
   4. Bottom bar: Copy · Clear · Undo · [Change API Key]
-     API key entry row expands/collapses inline below the buttons.
+     API key/provider entry rows expand/collapse inline below the buttons.
 """
 
 import customtkinter as ctk
@@ -39,6 +39,7 @@ class App(ctk.CTk):
         self._config = load_config()
         self._show_key = False
         self._api_key_expanded = False
+        self._api_provider = self._config.get("api_provider", "OpenAI")
 
         # ── Build UI ─────────────────────────────────────────────────
         # Pack order: top sections first, bottom bar anchored to bottom,
@@ -92,7 +93,7 @@ class App(ctk.CTk):
         self._status_label.pack(side="left")
 
     def _build_bottom_bar(self) -> None:
-        """Bottom section: action buttons + collapsible API key row."""
+        """Bottom section: action buttons + collapsible API key/provider rows."""
         self._bottom_frame = ctk.CTkFrame(self, fg_color="transparent")
         self._bottom_frame.pack(side="bottom", fill="x", padx=16, pady=(4, 10))
 
@@ -126,7 +127,26 @@ class App(ctk.CTk):
         )
         self._api_key_toggle_btn.pack(side="right")
 
-        # ── Row 2: API key entry (hidden by default) ─────────────────
+        # ── Row 2: API provider selector (hidden by default) ──────────
+        self._api_provider_row = ctk.CTkFrame(self._bottom_frame, fg_color="transparent")
+        # NOT packed yet — starts collapsed
+
+        ctk.CTkLabel(self._api_provider_row, text="Provider:", font=("", 12)).pack(
+            side="left", padx=(0, 6)
+        )
+
+        self._provider_var = ctk.StringVar(value=self._api_provider)
+        self._provider_dropdown = ctk.CTkOptionMenu(
+            self._api_provider_row,
+            values=["OpenAI", "OpenRouter"],
+            variable=self._provider_var,
+            width=140,
+            font=("", 12),
+            command=self._on_provider_changed,
+        )
+        self._provider_dropdown.pack(side="left", padx=(0, 6))
+
+        # ── Row 3: API key entry (hidden by default) ─────────────────
         self._api_key_row = ctk.CTkFrame(self._bottom_frame, fg_color="transparent")
         # NOT packed yet — starts collapsed
 
@@ -173,14 +193,20 @@ class App(ctk.CTk):
             self._expand_api_key()
 
     def _expand_api_key(self) -> None:
+        self._api_provider_row.pack(fill="x", pady=(6, 0))
         self._api_key_row.pack(fill="x", pady=(6, 0))
         self._api_key_expanded = True
         self._api_key_toggle_btn.configure(text="🔑 Hide API Key")
 
     def _collapse_api_key(self) -> None:
+        self._api_provider_row.pack_forget()
         self._api_key_row.pack_forget()
         self._api_key_expanded = False
         self._api_key_toggle_btn.configure(text="🔑 Change API Key")
+
+    def _on_provider_changed(self, choice: str) -> None:
+        """Called when the user picks a different provider from the dropdown."""
+        self._api_provider = choice
 
     def _toggle_key_visibility(self) -> None:
         self._show_key = not self._show_key
@@ -194,8 +220,9 @@ class App(ctk.CTk):
     def _save_api_key(self) -> None:
         key = self._api_key_entry.get().strip()
         self._config["api_key"] = key
+        self._config["api_provider"] = self._api_provider
         save_config(self._config)
-        self._set_status("API key saved ✓")
+        self._set_status(f"API key saved ✓ (Provider: {self._api_provider})")
         # Collapse the API key section after saving
         self._collapse_api_key()
 
@@ -215,7 +242,7 @@ class App(ctk.CTk):
     def _start_recording(self) -> None:
         api_key = self._get_api_key()
         if not api_key:
-            self._set_status("⚠ Enter your API key first!")
+            self._set_status(f"⚠ Enter your {self._api_provider} API key first!")
             self._expand_api_key()
             return
 
@@ -256,6 +283,7 @@ class App(ctk.CTk):
             api_key=self._get_api_key(),
             on_success=self._on_transcription_success,
             on_error=self._on_transcription_error,
+            api_provider=self._api_provider,
         )
 
     # ==================================================================
