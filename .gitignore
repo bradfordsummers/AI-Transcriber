@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.spec.bak
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# PyInstaller
+*.manifest
+*.log
+
+# Config (contains API key — never commit)
+config.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Temp audio files
+*.wav

@@ -1,0 +1,47 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*"  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+
+permissions:
+  contents: write  # Needed to create releases and upload assets
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build .exe with PyInstaller
+        run: pyinstaller main.spec --noconfirm
+
+      - name: Verify build
+        run: |
+          if (Test-Path "dist/AI-Transcriber.exe") {
+            Write-Host "Build successful: dist/AI-Transcriber.exe"
+            $size = (Get-Item "dist/AI-Transcriber.exe").Length / 1MB
+            Write-Host "File size: $([math]::Round($size, 2)) MB"
+          } else {
+            Write-Error "Build failed: AI-Transcriber.exe not found"
+            exit 1
+          }
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/AI-Transcriber.exe
+          generate_release_notes: true
